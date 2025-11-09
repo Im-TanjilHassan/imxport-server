@@ -52,6 +52,13 @@ async function run() {
       res.send(result);
     });
 
+    //GET for latest 6 product
+    app.get('/latestProduct', async (req, res) => {
+      const latestProducts = productCollection.find().sort({ createdAt: -1 }).limit(6);
+      const result = await latestProducts.toArray()
+      res.send(result)
+    })
+
     //   POST for products
     app.post("/products", async (req, res) => {
       const newProduct = req.body;
