@@ -89,8 +89,68 @@ async function run() {
       res.send(result);
     });
       
-      //   CRUD for imported products
+    //   CRUD for imported products
+    
+    //GET for all product
+    app.get('/import', async (req, res) => {
+      const email = req.query.email
+
+      if (!email) {
+        return res
+          .status(400)
+          .send({ success: false, message: "Email is required" });
+      }
+
+      const query = { userEmail: email }
+      const imports = await importCollection.find(query).toArray()
+
+      res.send(imports);
+    })
+
+    //POST for imported product
+    app.post('/import', async (req, res) => {
+      const { productId, quantity, userEmail } = req.body;
+      const query = { _id: new ObjectId(productId) }
       
+      const findProduct = await productCollection.findOne(query)
+      if (!findProduct) {
+        return res.status(404).send({success: false, message: "Product not found"})
+      }
+
+      if (quantity > findProduct.quantity) {
+        return res
+          .status(400)
+          .send({ success: false, message: "Not enough stock available" });
+      }
+
+      const productData = {
+        productId,
+        productName: findProduct.productName,
+        imageUrl: findProduct.imageUrl,
+        price: findProduct.price,
+        rating: findProduct.rating,
+        origin: findProduct.origin,
+        importedQuantity: quantity,
+        userEmail,
+        importDate: new Date(),
+      };
+
+      const result = await importCollection.insertOne(productData)
+
+      await productCollection.updateOne(
+        query,
+        {$inc:{quantity : -quantity}}
+      )
+
+      res.send({
+        success: true,
+        message: "Product imported successfully",
+        data: result,
+      });
+
+    })
+    
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
