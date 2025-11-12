@@ -98,7 +98,7 @@ async function run() {
       
     //   CRUD for imported products
     
-    //GET for all product
+    //GET for all imported product
     app.get('/import', async (req, res) => {
       const email = req.query.email
 
@@ -152,6 +152,7 @@ async function run() {
       res.send({
         success: true,
         message: "Product imported successfully",
+        updatedQuantity: findProduct.quantity - quantity,
         data: result,
       });
 
