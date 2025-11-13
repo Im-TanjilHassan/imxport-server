@@ -218,7 +218,7 @@ async function run() {
     });
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
@@ -229,4 +229,11 @@ async function run() {
 }
 run().catch(console.dir);
 
-app.listen(port);
+// ✅ For Vercel: export app instead of listening
+module.exports = app;
+
+// ✅ For local testing (optional):
+if (require.main === module) {
+  app.listen(port, () => console.log(`Server running on port ${port}`));
+}
+
