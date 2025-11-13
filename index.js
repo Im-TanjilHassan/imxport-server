@@ -71,8 +71,8 @@ async function run() {
       if (newProduct.userEmail) {
         const exportData = {
           ...newProduct,
-        }
-        await exportCollection.insertOne(exportData)
+        };
+        await exportCollection.insertOne(exportData);
       }
       res.send(result);
     });
@@ -99,16 +99,8 @@ async function run() {
       res.send(result);
     });
 
-    //   DELETE a product
-    app.delete("/products/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await productCollection.deleteOne(query);
-      res.send(result);
-    });
-
     //GET for my export product
-    app.get('/exports', async (req, res) => {
+    app.get("/exports", async (req, res) => {
       const email = req.query.email;
 
       if (!email) {
@@ -120,8 +112,28 @@ async function run() {
       const query = { userEmail: email };
       const result = await exportCollection.find(query).toArray();
 
-      res.send(result)
-    })
+      res.send(result);
+    });
+
+    //   DELETE a product
+    app.delete("/exports/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const exportItem = await exportCollection.findOne(query);
+
+      if (!exportItem) {
+        return res
+          .status(404)
+          .send({ success: false, message: "Export item not found" });
+      }
+
+      const productDelete = await productCollection.deleteOne({
+        productName: exportItem.productName,
+      });
+      
+      const result = await exportCollection.deleteOne(query);
+      res.send(result);
+    });
 
     //   CRUD for imported products
 
