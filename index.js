@@ -77,28 +77,6 @@ async function run() {
       res.send(result);
     });
 
-    //   PUT a product
-    app.put("/products/:id", async (req, res) => {
-      const id = req.params.id;
-      const updateProduct = req.body;
-
-      const query = { _id: new ObjectId(id) };
-
-      const updateDocument = {
-        $set: {
-          productName: updateProduct.productName,
-          imageUrl: updateProduct.imageUrl,
-          price: updateProduct.price,
-          origin: updateProduct.origin,
-          rating: updateProduct.rating,
-          quantity: updateProduct.quantity,
-        },
-      };
-
-      const result = await productCollection.updateOne(query, updateDocument);
-      res.send(result);
-    });
-
     //GET for my export product
     app.get("/exports", async (req, res) => {
       const email = req.query.email;
@@ -113,6 +91,39 @@ async function run() {
       const result = await exportCollection.find(query).toArray();
 
       res.send(result);
+    });
+
+    //   PUT a product
+    app.put("/exports/:id", async (req, res) => {
+      const id = req.params.id;
+      const updateProduct = req.body;
+
+      const query = { _id: new ObjectId(id) };
+
+      const updateDocument = {
+        $set: {
+          productName: updateProduct.productName,
+          imageUrl: updateProduct.imageUrl,
+          price: updateProduct.price,
+          origin: updateProduct.origin,
+          quantity: updateProduct.quantity,
+          category: updateProduct.category,
+          description: updateProduct.description,
+          updatedAt: new Date(),
+        },
+      };
+
+      const exportResult = await exportCollection.updateOne(
+        query,
+        updateDocument
+      );
+
+      const productResult = await productCollection.updateOne(
+        { productName: updateProduct.productName },
+        updateDocument
+      );
+
+      res.send({ exportResult, productResult });
     });
 
     //   DELETE a product
@@ -130,7 +141,7 @@ async function run() {
       const productDelete = await productCollection.deleteOne({
         productName: exportItem.productName,
       });
-      
+
       const result = await exportCollection.deleteOne(query);
       res.send(result);
     });
