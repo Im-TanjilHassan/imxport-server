@@ -229,11 +229,4 @@ async function run() {
 }
 run().catch(console.dir);
 
-// ✅ For Vercel: export app instead of listening
-module.exports = app;
-
-// ✅ For local testing (optional):
-if (require.main === module) {
-  app.listen(port, () => console.log(`Server running on port ${port}`));
-}
-
+app.listen(port, () => console.log(`Server running on port ${port}`));
