@@ -29,8 +29,9 @@ async function run() {
 
     //database collections
     const imxportDB = client.db("imxportDB");
-      const productCollection = imxportDB.collection("products");
-      const importCollection = imxportDB.collection("importProducts")
+    const productCollection = imxportDB.collection("products");
+    const importCollection = imxportDB.collection("importProducts");
+    const exportCollection = imxportDB.collection("exportProducts");
 
     //simple get operation
     app.get("/", (req, res) => {
@@ -53,16 +54,26 @@ async function run() {
     });
 
     //GET for latest 6 product
-    app.get('/latestProduct', async (req, res) => {
-      const latestProducts = productCollection.find().sort({ createdAt: -1 }).limit(6);
-      const result = await latestProducts.toArray()
-      res.send(result)
-    })
+    app.get("/latestProduct", async (req, res) => {
+      const latestProducts = productCollection
+        .find()
+        .sort({ createdAt: -1 })
+        .limit(6);
+      const result = await latestProducts.toArray();
+      res.send(result);
+    });
 
     //   POST for products
     app.post("/products", async (req, res) => {
       const newProduct = req.body;
       const result = await productCollection.insertOne(newProduct);
+
+      if (newProduct.userEmail) {
+        const exportData = {
+          ...newProduct,
+        }
+        await exportCollection.insertOne(exportData)
+      }
       res.send(result);
     });
 
@@ -95,12 +106,10 @@ async function run() {
       const result = await productCollection.deleteOne(query);
       res.send(result);
     });
-      
-    //   CRUD for imported products
-    
-    //GET for all imported product
-    app.get('/import', async (req, res) => {
-      const email = req.query.email
+
+    //GET for my export product
+    app.get('/exports', async (req, res) => {
+      const email = req.query.email;
 
       if (!email) {
         return res
@@ -108,20 +117,40 @@ async function run() {
           .send({ success: false, message: "Email is required" });
       }
 
-      const query = { userEmail: email }
-      const imports = await importCollection.find(query).toArray()
+      const query = { userEmail: email };
+      const result = await exportCollection.find(query).toArray();
 
-      res.send(imports);
+      res.send(result)
     })
 
+    //   CRUD for imported products
+
+    //GET for all imported product
+    app.get("/import", async (req, res) => {
+      const email = req.query.email;
+
+      if (!email) {
+        return res
+          .status(400)
+          .send({ success: false, message: "Email is required" });
+      }
+
+      const query = { userEmail: email };
+      const imports = await importCollection.find(query).toArray();
+
+      res.send(imports);
+    });
+
     //POST for imported product
-    app.post('/import', async (req, res) => {
+    app.post("/import", async (req, res) => {
       const { productId, quantity, userEmail } = req.body;
-      const query = { _id: new ObjectId(productId) }
-      
-      const findProduct = await productCollection.findOne(query)
+      const query = { _id: new ObjectId(productId) };
+
+      const findProduct = await productCollection.findOne(query);
       if (!findProduct) {
-        return res.status(404).send({success: false, message: "Product not found"})
+        return res
+          .status(404)
+          .send({ success: false, message: "Product not found" });
       }
 
       if (quantity > findProduct.quantity) {
@@ -142,12 +171,11 @@ async function run() {
         importDate: new Date(),
       };
 
-      const result = await importCollection.insertOne(productData)
+      const result = await importCollection.insertOne(productData);
 
-      await productCollection.updateOne(
-        query,
-        {$inc:{quantity : -quantity}}
-      )
+      await productCollection.updateOne(query, {
+        $inc: { quantity: -quantity },
+      });
 
       res.send({
         success: true,
@@ -155,18 +183,16 @@ async function run() {
         updatedQuantity: findProduct.quantity - quantity,
         data: result,
       });
+    });
 
-    })
-    
     //DELETE for imported product
-    app.delete('/import/:id', async (req, res)=>{
+    app.delete("/import/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id: new ObjectId(id) }
-      
-      const result = await importCollection.deleteOne(query)
-      res.send(result)
-    })
+      const query = { _id: new ObjectId(id) };
 
+      const result = await importCollection.deleteOne(query);
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
