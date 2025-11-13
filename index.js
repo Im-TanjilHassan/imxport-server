@@ -25,7 +25,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     //database collections
     const imxportDB = client.db("imxportDB");
@@ -33,10 +33,6 @@ async function run() {
     const importCollection = imxportDB.collection("importProducts");
     const exportCollection = imxportDB.collection("exportProducts");
 
-    //simple get operation
-    app.get("/", (req, res) => {
-      res.send("ImXport server after connecting to mongodb");
-    });
     // CRUD for Products
     //GET for all products
     app.get("/products", async (req, res) => {
@@ -168,6 +164,7 @@ async function run() {
     app.post("/import", async (req, res) => {
       const { productId, quantity, userEmail } = req.body;
       const query = { _id: new ObjectId(productId) };
+      const quantityToAdd = parseInt(quantity, 10);
 
       const findProduct = await productCollection.findOne(query);
       if (!findProduct) {
@@ -176,7 +173,7 @@ async function run() {
           .send({ success: false, message: "Product not found" });
       }
 
-      if (quantity > findProduct.quantity) {
+      if (quantityToAdd > findProduct.quantity) {
         return res
           .status(400)
           .send({ success: false, message: "Not enough stock available" });
@@ -189,21 +186,27 @@ async function run() {
         price: findProduct.price,
         rating: findProduct.rating,
         origin: findProduct.origin,
-        importedQuantity: quantity,
+        importedQuantity: quantityToAdd,
         userEmail,
         importDate: new Date(),
       };
 
       const result = await importCollection.insertOne(productData);
 
+      if (isNaN(quantityToAdd) || quantityToAdd <= 0) {
+        return res
+          .status(400)
+          .send({ success: false, message: "Invalid quantity" });
+      }
+
       await productCollection.updateOne(query, {
-        $inc: { quantity: -quantity },
+        $inc: { quantity: -quantityToAdd },
       });
 
       res.send({
         success: true,
         message: "Product imported successfully",
-        updatedQuantity: findProduct.quantity - quantity,
+        updatedQuantity: findProduct.quantity - quantityToAdd,
         data: result,
       });
     });
@@ -223,10 +226,14 @@ async function run() {
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
   } finally {
-    // Ensures that the client will close when you finish/error
     // await client.close();
   }
 }
 run().catch(console.dir);
+
+//simple get operation
+    app.get("/", (req, res) => {
+      res.send("ImXport server after connecting to mongodb");
+    });
 
 app.listen(port, () => console.log(`Server running on port ${port}`));
